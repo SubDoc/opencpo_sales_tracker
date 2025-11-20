@@ -1,0 +1,913 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>전기차 충전관제 시스템 영업 현황표 (팀 공유)</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+        
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            padding: 30px;
+            border-radius: 10px 10px 0 0;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+        }
+        
+        .header h1 {
+            font-size: 24px;
+            margin-bottom: 10px;
+        }
+        
+        .header p {
+            opacity: 0.9;
+            font-size: 14px;
+        }
+        
+        .sync-status {
+            display: inline-block;
+            margin-left: 15px;
+            padding: 5px 12px;
+            background: rgba(255,255,255,0.2);
+            border-radius: 15px;
+            font-size: 12px;
+        }
+        
+        .sync-status.synced {
+            background: rgba(16, 185, 129, 0.3);
+        }
+        
+        .sync-status.syncing {
+            background: rgba(251, 191, 36, 0.3);
+            animation: pulse 1.5s ease-in-out infinite;
+        }
+        
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.6; }
+        }
+        
+        .controls {
+            background: white;
+            padding: 20px;
+            display: flex;
+            gap: 15px;
+            flex-wrap: wrap;
+            align-items: center;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .controls button {
+            padding: 10px 20px;
+            background: #667eea;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+        }
+        
+        .controls button:hover {
+            background: #5568d3;
+            transform: translateY(-2px);
+            box-shadow: 0 4px 8px rgba(0,0,0,0.2);
+        }
+        
+        .controls button:disabled {
+            background: #ccc;
+            cursor: not-allowed;
+            transform: none;
+        }
+        
+        .controls button.secondary {
+            background: #10b981;
+        }
+        
+        .controls button.secondary:hover {
+            background: #059669;
+        }
+        
+        .summary {
+            background: white;
+            padding: 20px;
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            border-bottom: 2px solid #e0e0e0;
+        }
+        
+        .summary-card {
+            padding: 15px;
+            border-radius: 8px;
+            border-left: 4px solid #667eea;
+            background: #f8f9ff;
+        }
+        
+        .summary-card.success {
+            border-left-color: #10b981;
+            background: #f0fdf4;
+        }
+        
+        .summary-card.pending {
+            border-left-color: #f59e0b;
+            background: #fffbeb;
+        }
+        
+        .summary-card h3 {
+            font-size: 12px;
+            color: #666;
+            margin-bottom: 5px;
+        }
+        
+        .summary-card .value {
+            font-size: 24px;
+            font-weight: bold;
+            color: #333;
+        }
+        
+        .table-container {
+            background: white;
+            overflow-x: auto;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-radius: 0 0 10px 10px;
+        }
+        
+        table {
+            width: 100%;
+            border-collapse: collapse;
+            min-width: 1650px;
+        }
+        
+        th {
+            background: #f8f9fa;
+            padding: 12px 8px;
+            text-align: left;
+            font-weight: bold;
+            font-size: 13px;
+            border-bottom: 2px solid #dee2e6;
+            position: sticky;
+            top: 0;
+            z-index: 10;
+            white-space: nowrap;
+        }
+        
+        td {
+            padding: 10px 8px;
+            border-bottom: 1px solid #e9ecef;
+            font-size: 13px;
+            vertical-align: top;
+        }
+        
+        tr:hover {
+            background-color: #f8f9ff;
+        }
+        
+        input, select, textarea {
+            width: 100%;
+            padding: 6px;
+            border: 1px solid #ddd;
+            border-radius: 4px;
+            font-size: 13px;
+        }
+        
+        textarea {
+            resize: vertical;
+            min-height: 60px;
+        }
+        
+        input:focus, select:focus, textarea:focus {
+            outline: none;
+            border-color: #667eea;
+            box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        }
+        
+        .charger-list {
+            background: #f8f9fa;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 5px;
+        }
+        
+        .charger-item {
+            background: white;
+            padding: 8px;
+            margin-bottom: 8px;
+            border-radius: 4px;
+            border-left: 3px solid #667eea;
+            display: grid;
+            grid-template-columns: 80px 100px auto;
+            gap: 8px;
+            align-items: center;
+        }
+        
+        .charger-item .charger-details {
+            grid-column: 1 / -1;
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 8px;
+        }
+        
+        .charger-item input, .charger-item select {
+            font-size: 12px;
+            padding: 4px;
+        }
+        
+        .charger-item .remove-charger {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 4px 8px;
+            border-radius: 3px;
+            cursor: pointer;
+            font-size: 11px;
+        }
+        
+        .charger-item .remove-charger:hover {
+            background: #dc2626;
+        }
+        
+        .add-charger-btn {
+            background: #10b981;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+            width: 100%;
+            margin-top: 5px;
+        }
+        
+        .add-charger-btn:hover {
+            background: #059669;
+        }
+        
+        .charger-summary {
+            font-size: 11px;
+            color: #666;
+            margin-top: 5px;
+            font-weight: bold;
+        }
+        
+        .delete-btn {
+            background: #ef4444;
+            color: white;
+            border: none;
+            padding: 6px 12px;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 12px;
+        }
+        
+        .delete-btn:hover {
+            background: #dc2626;
+        }
+        
+        .loading-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0,0,0,0.5);
+            display: none;
+            justify-content: center;
+            align-items: center;
+            z-index: 1000;
+        }
+        
+        .loading-overlay.show {
+            display: flex;
+        }
+        
+        .loading-content {
+            background: white;
+            padding: 30px;
+            border-radius: 10px;
+            text-align: center;
+        }
+        
+        .spinner {
+            border: 4px solid #f3f3f3;
+            border-top: 4px solid #667eea;
+            border-radius: 50%;
+            width: 40px;
+            height: 40px;
+            animation: spin 1s linear infinite;
+            margin: 0 auto 15px;
+        }
+        
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        
+        @media (max-width: 768px) {
+            body {
+                padding: 10px;
+            }
+            
+            .controls {
+                flex-direction: column;
+                align-items: stretch;
+            }
+            
+            .controls button {
+                width: 100%;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="loading-overlay" id="loadingOverlay">
+        <div class="loading-content">
+            <div class="spinner"></div>
+            <p>데이터 동기화 중...</p>
+        </div>
+    </div>
+
+    <div class="header">
+        <h1>⚡ 전기차 충전관제 시스템 영업 현황표 (팀 공유)</h1>
+        <p>실시간 팀 협업 시스템 - Google Sheets 연동
+            <span class="sync-status" id="syncStatus">연결 대기 중</span>
+        </p>
+    </div>
+    
+    <div class="controls">
+        <button onclick="addRow()">➕ 고객사 추가</button>
+        <button onclick="loadFromSheets()" id="loadBtn">🔄 데이터 새로고침</button>
+        <button onclick="saveToSheets()" id="saveBtn">💾 수동 저장</button>
+        <button class="secondary" onclick="exportToExcel()">📊 엑셀 다운로드</button>
+    </div>
+    
+    <div class="summary">
+        <div class="summary-card">
+            <h3>전체 고객사</h3>
+            <div class="value" id="totalClients">0</div>
+        </div>
+        <div class="summary-card success">
+            <h3>성사 건수</h3>
+            <div class="value" id="successCount">0</div>
+        </div>
+        <div class="summary-card pending">
+            <h3>진행중 건수</h3>
+            <div class="value" id="progressCount">0</div>
+        </div>
+        <div class="summary-card">
+            <h3>총 충전기 수</h3>
+            <div class="value" id="totalChargers">0대</div>
+        </div>
+        <div class="summary-card success">
+            <h3>월 예상 매출</h3>
+            <div class="value" id="monthlyRevenue">0원</div>
+        </div>
+        <div class="summary-card">
+            <h3>총 초기 구축비</h3>
+            <div class="value" id="totalSetupFee">0원</div>
+        </div>
+    </div>
+    
+    <div class="table-container">
+        <table id="salesTable">
+            <thead>
+                <tr>
+                    <th style="width: 50px;">번호</th>
+                    <th style="width: 150px;">고객사명</th>
+                    <th style="width: 120px;">비즈니스 모델</th>
+                    <th style="width: 250px;">충전기 정보</th>
+                    <th style="width: 120px;">초기 구축비(원)</th>
+                    <th style="width: 120px;">월 구독료(원)</th>
+                    <th style="width: 120px;">충전기당 단가(원)</th>
+                    <th style="width: 100px;">영업 담당자</th>
+                    <th style="width: 100px;">영업 단계</th>
+                    <th style="width: 120px;">계약일</th>
+                    <th style="width: 120px;">수금 개시일</th>
+                    <th style="width: 120px;">담당자 연락처</th>
+                    <th style="width: 200px;">비고</th>
+                    <th style="width: 80px;">작업</th>
+                </tr>
+            </thead>
+            <tbody id="tableBody">
+            </tbody>
+        </table>
+    </div>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+    <script>
+        // Google Apps Script Web App URL (배포 후 여기에 입력)
+        const SCRIPT_URL = 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE';
+        
+        let autoSyncInterval = null;
+        let isSyncing = false;
+        
+        // 페이지 로드 시 데이터 불러오기
+        window.addEventListener('DOMContentLoaded', function() {
+            if (SCRIPT_URL === 'YOUR_GOOGLE_APPS_SCRIPT_URL_HERE') {
+                alert('⚠️ Google Apps Script URL을 설정해주세요!\n\n설정 방법은 함께 제공된 가이드 문서를 참고하세요.');
+                return;
+            }
+            loadFromSheets();
+            startAutoSync();
+        });
+        
+        // 자동 동기화 시작 (30초마다)
+        function startAutoSync() {
+            autoSyncInterval = setInterval(() => {
+                loadFromSheets(true); // 조용히 로드
+            }, 30000);
+        }
+        
+        // 동기화 상태 표시
+        function updateSyncStatus(status, message) {
+            const statusEl = document.getElementById('syncStatus');
+            statusEl.className = 'sync-status';
+            
+            switch(status) {
+                case 'syncing':
+                    statusEl.className += ' syncing';
+                    statusEl.textContent = '🔄 ' + message;
+                    break;
+                case 'synced':
+                    statusEl.className += ' synced';
+                    statusEl.textContent = '✓ ' + message;
+                    break;
+                case 'error':
+                    statusEl.textContent = '✗ ' + message;
+                    break;
+                default:
+                    statusEl.textContent = message;
+            }
+        }
+        
+        // Google Sheets에서 데이터 불러오기
+        async function loadFromSheets(silent = false) {
+            if (isSyncing) return;
+            isSyncing = true;
+            
+            if (!silent) {
+                document.getElementById('loadingOverlay').classList.add('show');
+            }
+            updateSyncStatus('syncing', '데이터 불러오는 중...');
+            
+            try {
+                const response = await fetch(SCRIPT_URL + '?action=load');
+                const result = await response.json();
+                
+                if (result.success) {
+                    document.getElementById('tableBody').innerHTML = '';
+                    result.data.forEach(rowData => {
+                        restoreRow(rowData);
+                    });
+                    calculateSummary();
+                    updateSyncStatus('synced', '동기화 완료 (' + new Date().toLocaleTimeString() + ')');
+                    if (!silent) {
+                        alert('데이터를 성공적으로 불러왔습니다.');
+                    }
+                } else {
+                    throw new Error(result.message || '데이터 불러오기 실패');
+                }
+            } catch (error) {
+                console.error('Load error:', error);
+                updateSyncStatus('error', '불러오기 실패');
+                if (!silent) {
+                    alert('데이터 불러오기 실패: ' + error.message);
+                }
+            } finally {
+                isSyncing = false;
+                if (!silent) {
+                    document.getElementById('loadingOverlay').classList.remove('show');
+                }
+            }
+        }
+        
+        // Google Sheets에 데이터 저장
+        async function saveToSheets() {
+            if (isSyncing) {
+                alert('동기화 진행 중입니다. 잠시 후 다시 시도해주세요.');
+                return;
+            }
+            isSyncing = true;
+            
+            document.getElementById('loadingOverlay').classList.add('show');
+            updateSyncStatus('syncing', '데이터 저장 중...');
+            
+            try {
+                const data = collectAllData();
+                
+                const response = await fetch(SCRIPT_URL, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                    },
+                    body: JSON.stringify({
+                        action: 'save',
+                        data: data
+                    })
+                });
+                
+                const result = await response.json();
+                
+                if (result.success) {
+                    updateSyncStatus('synced', '저장 완료 (' + new Date().toLocaleTimeString() + ')');
+                    alert('데이터가 성공적으로 저장되었습니다.');
+                } else {
+                    throw new Error(result.message || '저장 실패');
+                }
+            } catch (error) {
+                console.error('Save error:', error);
+                updateSyncStatus('error', '저장 실패');
+                alert('데이터 저장 실패: ' + error.message);
+            } finally {
+                isSyncing = false;
+                document.getElementById('loadingOverlay').classList.remove('show');
+            }
+        }
+        
+        // 모든 데이터 수집
+        function collectAllData() {
+            const rows = document.querySelectorAll('#tableBody tr');
+            const data = [];
+            
+            rows.forEach(row => {
+                const cells = row.cells;
+                const rowId = row.getAttribute('data-row-id');
+                
+                const chargers = [];
+                const chargerItems = cells[3].querySelectorAll('.charger-item');
+                chargerItems.forEach(item => {
+                    const detailInputs = item.querySelector('.charger-details').querySelectorAll('input[type="text"]');
+                    chargers.push({
+                        type: item.querySelector('select').value,
+                        quantity: item.querySelector('input[type="number"]').value,
+                        manufacturer: detailInputs[0].value,
+                        model: detailInputs[1].value
+                    });
+                });
+                
+                data.push({
+                    rowId: rowId,
+                    company: cells[1].querySelector('input').value,
+                    businessModel: cells[2].querySelector('select').value,
+                    chargers: chargers,
+                    setupFee: cells[4].querySelector('input').value,
+                    monthlyFee: cells[5].querySelector('input').value,
+                    unitPrice: cells[6].querySelector('input').value,
+                    salesPerson: cells[7].querySelector('input').value,
+                    status: cells[8].querySelector('select').value,
+                    contractDate: cells[9].querySelector('input').value,
+                    billingStart: cells[10].querySelector('input').value,
+                    contact: cells[11].querySelector('input').value,
+                    note: cells[12].querySelector('textarea').value,
+                    lastUpdated: new Date().toISOString()
+                });
+            });
+            
+            return data;
+        }
+        
+        // 행 복원
+        function restoreRow(rowData) {
+            const tbody = document.getElementById('tableBody');
+            const rowCount = tbody.querySelectorAll('tr').length;
+            const rowId = rowData.rowId || 'row_' + Date.now() + '_' + Math.random();
+            
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-row-id', rowId);
+            
+            tr.innerHTML = `
+                <td>${rowCount + 1}</td>
+                <td><input type="text" value="${rowData.company || ''}" placeholder="고객사명"></td>
+                <td>
+                    <select onchange="handleModelChange(this)">
+                        <option value="구독" ${rowData.businessModel === '구독' ? 'selected' : ''}>구독</option>
+                        <option value="독립" ${rowData.businessModel === '독립' ? 'selected' : ''}>독립</option>
+                        <option value="구축임대" ${rowData.businessModel === '구축임대' ? 'selected' : ''}>구축임대</option>
+                        <option value="RTPS" ${rowData.businessModel === 'RTPS' ? 'selected' : ''}>RTPS</option>
+                        <option value="SI" ${rowData.businessModel === 'SI' ? 'selected' : ''}>SI</option>
+                        <option value="충전기" ${rowData.businessModel === '충전기' ? 'selected' : ''}>충전기</option>
+                        <option value="시설" ${rowData.businessModel === '시설' ? 'selected' : ''}>시설</option>
+                    </select>
+                </td>
+                <td>
+                    <div class="charger-list" data-row-id="${rowId}">
+                        <div class="charger-summary"></div>
+                        <button class="add-charger-btn" onclick="addCharger('${rowId}')">+ 충전기 추가</button>
+                    </div>
+                </td>
+                <td><input type="number" class="setupFee" value="${rowData.setupFee || ''}" placeholder="0" min="0" step="1000" onchange="calculateSummary()"></td>
+                <td><input type="number" class="monthlyFee" value="${rowData.monthlyFee || ''}" placeholder="0" min="0" step="1000" onchange="calculateSummary()"></td>
+                <td><input type="number" value="${rowData.unitPrice || ''}" placeholder="0" min="0" step="1000"></td>
+                <td><input type="text" value="${rowData.salesPerson || ''}" placeholder="영업 담당자"></td>
+                <td>
+                    <select onchange="calculateSummary()">
+                        <option value="진행중" ${rowData.status === '진행중' ? 'selected' : ''}>진행중</option>
+                        <option value="성사" ${rowData.status === '성사' ? 'selected' : ''}>성사</option>
+                        <option value="보류" ${rowData.status === '보류' ? 'selected' : ''}>보류</option>
+                        <option value="취소" ${rowData.status === '취소' ? 'selected' : ''}>취소</option>
+                    </select>
+                </td>
+                <td><input type="date" value="${rowData.contractDate || ''}"></td>
+                <td><input type="date" value="${rowData.billingStart || ''}"></td>
+                <td><input type="text" value="${rowData.contact || ''}" placeholder="010-0000-0000"></td>
+                <td><textarea placeholder="비고사항">${rowData.note || ''}</textarea></td>
+                <td><button class="delete-btn" onclick="deleteRow(this)">삭제</button></td>
+            `;
+            
+            tbody.appendChild(tr);
+            
+            if (rowData.chargers && rowData.chargers.length > 0) {
+                rowData.chargers.forEach(charger => {
+                    addChargerWithData(rowId, charger);
+                });
+            }
+            
+            const select = tr.querySelector('select');
+            handleModelChange(select);
+        }
+        
+        function addChargerWithData(rowId, chargerData) {
+            const chargerList = document.querySelector(`[data-row-id="${rowId}"]`);
+            const addButton = chargerList.querySelector('.add-charger-btn');
+            
+            const newCharger = document.createElement('div');
+            newCharger.className = 'charger-item';
+            newCharger.innerHTML = `
+                <select onchange="updateChargerSummary('${rowId}')">
+                    <option value="급속" ${chargerData.type === '급속' ? 'selected' : ''}>급속</option>
+                    <option value="완속" ${chargerData.type === '완속' ? 'selected' : ''}>완속</option>
+                </select>
+                <input type="number" value="${chargerData.quantity || 1}" placeholder="수량" min="1" oninput="updateChargerSummary('${rowId}'); calculateSummary();">
+                <button class="remove-charger" onclick="removeCharger(this, '${rowId}')">삭제</button>
+                <div class="charger-details">
+                    <input type="text" value="${chargerData.manufacturer || ''}" placeholder="제조사" onchange="updateChargerSummary('${rowId}')">
+                    <input type="text" value="${chargerData.model || ''}" placeholder="모델명" onchange="updateChargerSummary('${rowId}')">
+                </div>
+            `;
+            
+            chargerList.insertBefore(newCharger, addButton);
+            updateChargerSummary(rowId);
+        }
+        
+        function addRow() {
+            const tbody = document.getElementById('tableBody');
+            const rowCount = tbody.querySelectorAll('tr').length;
+            const rowId = 'row_' + Date.now();
+            
+            const tr = document.createElement('tr');
+            tr.setAttribute('data-row-id', rowId);
+            
+            tr.innerHTML = `
+                <td>${rowCount + 1}</td>
+                <td><input type="text" placeholder="고객사명"></td>
+                <td>
+                    <select onchange="handleModelChange(this)">
+                        <option value="구독">구독</option>
+                        <option value="독립">독립</option>
+                        <option value="구축임대">구축임대</option>
+                        <option value="RTPS">RTPS</option>
+                        <option value="SI">SI</option>
+                        <option value="충전기">충전기</option>
+                        <option value="시설">시설</option>
+                    </select>
+                </td>
+                <td>
+                    <div class="charger-list" data-row-id="${rowId}">
+                        <div class="charger-summary">총 0대</div>
+                        <button class="add-charger-btn" onclick="addCharger('${rowId}')">+ 충전기 추가</button>
+                    </div>
+                </td>
+                <td><input type="number" class="setupFee" placeholder="0" min="0" step="1000" onchange="calculateSummary()"></td>
+                <td><input type="number" class="monthlyFee" placeholder="0" min="0" step="1000" onchange="calculateSummary()"></td>
+                <td><input type="number" placeholder="0" min="0" step="1000"></td>
+                <td><input type="text" placeholder="영업 담당자"></td>
+                <td>
+                    <select onchange="calculateSummary()">
+                        <option value="진행중" selected>진행중</option>
+                        <option value="성사">성사</option>
+                        <option value="보류">보류</option>
+                        <option value="취소">취소</option>
+                    </select>
+                </td>
+                <td><input type="date"></td>
+                <td><input type="date"></td>
+                <td><input type="text" placeholder="010-0000-0000"></td>
+                <td><textarea placeholder="비고사항"></textarea></td>
+                <td><button class="delete-btn" onclick="deleteRow(this)">삭제</button></td>
+            `;
+            
+            tbody.appendChild(tr);
+            calculateSummary();
+        }
+        
+        function addCharger(rowId) {
+            const chargerList = document.querySelector(`[data-row-id="${rowId}"]`);
+            const addButton = chargerList.querySelector('.add-charger-btn');
+            
+            const newCharger = document.createElement('div');
+            newCharger.className = 'charger-item';
+            newCharger.innerHTML = `
+                <select onchange="updateChargerSummary('${rowId}')">
+                    <option value="급속">급속</option>
+                    <option value="완속" selected>완속</option>
+                </select>
+                <input type="number" value="1" placeholder="수량" min="1" oninput="updateChargerSummary('${rowId}'); calculateSummary();">
+                <button class="remove-charger" onclick="removeCharger(this, '${rowId}')">삭제</button>
+                <div class="charger-details">
+                    <input type="text" placeholder="제조사" onchange="updateChargerSummary('${rowId}')">
+                    <input type="text" placeholder="모델명" onchange="updateChargerSummary('${rowId}')">
+                </div>
+            `;
+            
+            chargerList.insertBefore(newCharger, addButton);
+            updateChargerSummary(rowId);
+            calculateSummary();
+        }
+        
+        function removeCharger(btn, rowId) {
+            btn.closest('.charger-item').remove();
+            updateChargerSummary(rowId);
+            calculateSummary();
+        }
+        
+        function updateChargerSummary(rowId) {
+            const chargerList = document.querySelector(`[data-row-id="${rowId}"]`);
+            const chargerItems = chargerList.querySelectorAll('.charger-item');
+            const summary = chargerList.querySelector('.charger-summary');
+            
+            let totalQuantity = 0;
+            let fastCount = 0;
+            let slowCount = 0;
+            
+            chargerItems.forEach(item => {
+                const quantity = parseInt(item.querySelector('input[type="number"]').value) || 0;
+                const type = item.querySelector('select').value;
+                
+                totalQuantity += quantity;
+                if (type === '급속') fastCount += quantity;
+                else slowCount += quantity;
+            });
+            
+            summary.textContent = `총 ${totalQuantity}대 (급속: ${fastCount}대, 완속: ${slowCount}대)`;
+        }
+        
+        function handleModelChange(select) {
+            const row = select.closest('tr');
+            const setupFeeInput = row.querySelector('.setupFee');
+            const monthlyFeeInput = row.querySelector('.monthlyFee');
+            
+            if (select.value === '구독') {
+                setupFeeInput.value = '0';
+                setupFeeInput.disabled = true;
+                setupFeeInput.style.background = '#f5f5f5';
+                monthlyFeeInput.disabled = false;
+                monthlyFeeInput.style.background = 'white';
+            } else if (select.value === '독립') {
+                monthlyFeeInput.value = '0';
+                setupFeeInput.disabled = false;
+                setupFeeInput.style.background = 'white';
+                monthlyFeeInput.disabled = true;
+                monthlyFeeInput.style.background = '#f5f5f5';
+            } else {
+                setupFeeInput.disabled = false;
+                setupFeeInput.style.background = 'white';
+                monthlyFeeInput.disabled = false;
+                monthlyFeeInput.style.background = 'white';
+            }
+            
+            calculateSummary();
+        }
+        
+        function deleteRow(btn) {
+            if (confirm('이 고객사를 삭제하시겠습니까?\n\n저장 버튼을 눌러야 서버에 반영됩니다.')) {
+                btn.closest('tr').remove();
+                calculateSummary();
+            }
+        }
+        
+        function calculateSummary() {
+            const rows = document.querySelectorAll('#tableBody tr');
+            let totalClients = rows.length;
+            let successCount = 0;
+            let progressCount = 0;
+            let totalChargers = 0;
+            let monthlyRevenue = 0;
+            let totalSetupFee = 0;
+            
+            rows.forEach(row => {
+                const cells = row.cells;
+                const status = cells[8].querySelector('select').value;
+                const setupFee = parseInt(cells[4].querySelector('input').value) || 0;
+                const monthlyFee = parseInt(cells[5].querySelector('input').value) || 0;
+                
+                const chargerItems = cells[3].querySelectorAll('.charger-item');
+                let rowChargers = 0;
+                chargerItems.forEach(item => {
+                    rowChargers += parseInt(item.querySelector('input[type="number"]').value) || 0;
+                });
+                totalChargers += rowChargers;
+                
+                if (status === '성사') {
+                    successCount++;
+                    monthlyRevenue += monthlyFee;
+                    totalSetupFee += setupFee;
+                } else if (status === '진행중') {
+                    progressCount++;
+                }
+            });
+            
+            document.getElementById('totalClients').textContent = totalClients;
+            document.getElementById('successCount').textContent = successCount;
+            document.getElementById('progressCount').textContent = progressCount;
+            document.getElementById('totalChargers').textContent = totalChargers + '대';
+            document.getElementById('monthlyRevenue').textContent = monthlyRevenue.toLocaleString() + '원';
+            document.getElementById('totalSetupFee').textContent = totalSetupFee.toLocaleString() + '원';
+        }
+        
+        function exportToExcel() {
+            const table = document.getElementById('salesTable');
+            const rows = table.querySelectorAll('tbody tr');
+            
+            const data = [
+                ['번호', '고객사명', '비즈니스 모델', '충전기 타입', '제조사', '모델명', '수량', 
+                 '초기 구축비(원)', '월 구독료(원)', '충전기당 단가(원)', '영업 담당자', '영업 단계', 
+                 '계약일', '수금 개시일', '담당자 연락처', '비고']
+            ];
+            
+            let rowNum = 1;
+            rows.forEach(row => {
+                const cells = row.cells;
+                const company = cells[1].querySelector('input').value;
+                const model = cells[2].querySelector('select').value;
+                const setupFee = cells[4].querySelector('input').value;
+                const monthlyFee = cells[5].querySelector('input').value;
+                const unitPrice = cells[6].querySelector('input').value;
+                const sales = cells[7].querySelector('input').value;
+                const status = cells[8].querySelector('select').value;
+                const contractDate = cells[9].querySelector('input').value;
+                const billingStart = cells[10].querySelector('input').value;
+                const contact = cells[11].querySelector('input').value;
+                const note = cells[12].querySelector('textarea').value;
+                
+                const chargerItems = cells[3].querySelectorAll('.charger-item');
+                
+                if (chargerItems.length === 0) {
+                    data.push([rowNum++, company, model, '', '', '', '', setupFee, monthlyFee, unitPrice, 
+                              sales, status, contractDate, billingStart, contact, note]);
+                } else {
+                    chargerItems.forEach((item, index) => {
+                        const quantity = item.querySelector('input[type="number"]').value;
+                        const type = item.querySelector('select').value;
+                        const detailInputs = item.querySelector('.charger-details').querySelectorAll('input[type="text"]');
+                        const manufacturer = detailInputs[0].value;
+                        const chargerModel = detailInputs[1].value;
+                        
+                        if (index === 0) {
+                            data.push([rowNum++, company, model, type, manufacturer, chargerModel, quantity,
+                                      setupFee, monthlyFee, unitPrice, sales, status, contractDate, 
+                                      billingStart, contact, note]);
+                        } else {
+                            data.push(['', '', '', type, manufacturer, chargerModel, quantity, '', '', '', 
+                                      '', '', '', '', '', '']);
+                        }
+                    });
+                }
+            });
+            
+            data.push([]);
+            data.push(['=== 영업 현황 집계 ===']);
+            data.push(['전체 고객사', document.getElementById('totalClients').textContent]);
+            data.push(['성사 건수', document.getElementById('successCount').textContent]);
+            data.push(['진행중 건수', document.getElementById('progressCount').textContent]);
+            data.push(['총 충전기 수', document.getElementById('totalChargers').textContent]);
+            data.push(['월 예상 매출', document.getElementById('monthlyRevenue').textContent]);
+            data.push(['총 초기 구축비', document.getElementById('totalSetupFee').textContent]);
+            
+            const ws = XLSX.utils.aoa_to_sheet(data);
+            
+            ws['!cols'] = [
+                {wch: 6}, {wch: 20}, {wch: 12}, {wch: 10}, {wch: 15}, 
+                {wch: 15}, {wch: 8}, {wch: 15}, {wch: 15}, {wch: 15}, 
+                {wch: 12}, {wch: 10}, {wch: 12}, {wch: 12}, {wch: 15}, {wch: 30}
+            ];
+            
+            const wb = XLSX.utils.book_new();
+            XLSX.utils.book_append_sheet(wb, ws, '영업현황');
+            
+            const date = new Date().toISOString().split('T')[0];
+            XLSX.writeFile(wb, `전기차충전관제_영업현황_${date}.xlsx`);
+        }
+    </script>
+</body>
+</html>
